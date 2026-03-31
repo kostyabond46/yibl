@@ -1,0 +1,50 @@
+const puppeteer = require('puppeteer');
+
+async function uploadVideo() {
+    // Запуск браузера (на Render треба додати '--no-sandbox')
+    const browser = await puppeteer.launch({ 
+        headless: false, // Зробіть true для Render
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    });
+    
+    const page = await browser.newPage();
+
+    // 1. Перехід до Студії YouTube
+    await page.goto('https://youtube.com');
+
+    // ТУТ ПАУЗА: Вам треба буде один раз увійти в акаунт вручну 
+    // або підставити свої Cookies (це безпечніше, ніж логін/пароль у коді)
+    console.log('Очікування авторизації...');
+
+    // 2. Натискання кнопки "Створити" -> "Додати відео"
+    await page.waitForSelector('#create-icon');
+    await page.click('#create-icon');
+    await page.waitForSelector('#text-item-0');
+    await page.click('#text-item-0');
+
+    // 3. Вибір файлу (шлях до відео на сервері Render)
+    const [fileChooser] = await Promise.all([
+        page.waitForFileChooser(),
+        page.click('#select-files-button'),
+    ]);
+    await fileChooser.accept(['./video_to_upload.mp4']);
+
+    // 4. Заповнення назви та очікування завантаження
+    await page.waitForSelector('#textbox');
+    console.log('Відео завантажується...');
+
+    // 5. Натискання "Далі" до кінця та "Опублікувати"
+    for (let i = 0; i < 3; i++) {
+        await page.waitForSelector('#next-button');
+        await page.click('#next-button');
+        await new Promise(r => setTimeout(r, 2000));
+    }
+
+    await page.waitForSelector('#done-button');
+    await page.click('#done-button');
+
+    console.log('Готово!');
+    await browser.close();
+}
+
+uploadVideo();
